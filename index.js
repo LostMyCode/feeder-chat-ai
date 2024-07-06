@@ -6,7 +6,7 @@ require('dotenv').config();
 // .env ファイルから API キーを読み込む
 const GENERATIVE_AI_API_KEY = process.env.GEMINI_API_KEY;
 
-const FEED_URL = 'https://www2.x-feeder.info/minnnano/'; // 監視対象のフィードURL
+const FEED_URL = process.env.FEED_URL || 'https://www2.x-feeder.info/minnnano/'; // 監視対象のフィードURL
 const USER_NAME = "TEST"; // ボットのユーザー名
 const ENABLE_HISTORY_CHECK = true; // 過去のメッセージを考慮するかどうか
 const CHECK_INTERVAL = 300; // 新しいメッセージの確認間隔（ミリ秒）
