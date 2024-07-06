@@ -13,6 +13,14 @@ const CHECK_INTERVAL = 300; // 新しいメッセージの確認間隔（ミリ�
 const HISTORY_LENGTH = 5; // 過去のメッセージ取得件数
 
 const repliedIdsFile = 'replied_ids.json';
+const userFlip = process.env.USER_FLIP || '';
+const probMessages = (() => {
+    try {
+        return JSON.parse(fs.readFileSync('./prob_messages.json', 'utf-8'));
+    } catch (e) {
+        return {};
+    }
+})();
 
 const generativeAi = new GoogleGenerativeAI(GENERATIVE_AI_API_KEY);
 
@@ -97,12 +105,18 @@ class ChatMessage {
                 : [];
 
             // Geminiに返信を生成してもらう
-            const geminiResponse = await generateGeminiResponse(message, history);
+            let geminiResponse = await generateGeminiResponse(message, history);
 
             if (geminiResponse?.replace(/\n/g, "")?.replace(/ /g, "") === "null") {
                 console.log('返す必要がないのでスキップ');
                 repliedIdManager.add(message.id);
                 return;
+            }
+
+            const chatRoomId = FEED_URL.match(/\.info\/([^\/]+)\//)[1];
+
+            if (probMessages[chatRoomId] && isExecuteWithProbability(0.1)) {
+                geminiResponse += probMessages[chatRoomId];
             }
 
             console.log("Geminiのレスポンス:", geminiResponse);
@@ -212,13 +226,21 @@ async function generateGeminiResponse(message, history) {
 
 // 返信を投稿する関数
 async function postResponse(page, responseText, userName) {
-    await page.evaluate((responseText, userName) => {
+    await page.evaluate((responseText, userName, userFlip) => {
         const nameInput = document.getElementById("post_form_name");
         const formSingleInput = document.getElementById("post_form_multi");
         const postBtn = document.getElementById("post_btn");
 
-        nameInput.value = userName;
+        nameInput.value = userName + userFlip;
         formSingleInput.value = responseText;
         postBtn.click();
-    }, responseText, userName);
+    }, responseText, userName, userFlip);
+}
+
+function isExecuteWithProbability(probability) {
+    // 0から1未満の乱数を生成
+    const randomValue = Math.random();
+
+    // 生成した乱数が確率以下ならtrueを返す
+    return randomValue < probability;
 }
